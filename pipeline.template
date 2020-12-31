@@ -13,7 +13,7 @@ multifilesrc
   width=1280
   height=720
 ! nvinfer
-  config-file-path=models/Primary_Detector/config_infer_primary.txt
+  config-file-path=models/Primary_Detector/config_infer_primary.txt {output_tensors_string}
 ! nvinfer
-  config-file-path=models/Secondary_CarColor/config_infer_secondary_carcolor.txt
+  config-file-path=models/Secondary_CarColor/config_infer_secondary_carcolor.txt {output_tensors_string}
 ! fakesink name=monitor

@@ -4,6 +4,7 @@
 
 import logging
 from pathlib import Path
+import sys
 
 import gi
 
@@ -14,7 +15,9 @@ import pyds
 
 logger = logging.getLogger(__name__)
 
-PIPELINE_SRC = Path(__file__).parent / "pipeline.txt"
+PIPELINE_SRC = Path(__file__).parent / "pipeline.template"
+LOGS_DETECTIONS = "logs/detections"
+LOGS_CLASSIFICATIONS = "logs/classifications"
 
 def file_logger(filepath):
     path = Path(filepath).resolve()
@@ -25,9 +28,12 @@ def file_logger(filepath):
     logger.addHandler(ch)
     return logger
 
-def build_pipeline():
+def build_pipeline(output_raw):
+    pipeline_customization = {
+        "output_tensors_string": "output-tensor-meta=true raw-output-file-write=true" if output_raw else ""
+    }
     with open(PIPELINE_SRC) as fp:
-        pipeline_string = fp.read()
+        pipeline_string = fp.read().format_map(pipeline_customization)
 
     pipeline = Gst.parse_launch(pipeline_string)
     if not pipeline:
@@ -59,11 +65,10 @@ def _get_or_raise(obj, by, name=None):
     return attribute
 
 def osd_sink_pad_buffer_probe(pad, info, detslogger, classiflogger):
-    num_rects=0
     gst_buffer = info.get_buffer()
     if not gst_buffer:
-        print("Unable to get GstBuffer ")
-        return
+        return logger.warning("Unable to get GstBuffer ")
+
 
     batch_meta = pyds.gst_buffer_get_nvds_batch_meta(hash(gst_buffer))
     l_frame = batch_meta.frame_meta_list
@@ -123,15 +128,15 @@ def attach_buffer_probe(pipeline, detslogger, classiflogger):
     sinkpad = _get_or_raise(monitor, "get_static_pad", "sink")
     sinkpad.add_probe(Gst.PadProbeType.BUFFER, osd_sink_pad_buffer_probe, detslogger, classiflogger)
 
-def main():
+def run_pipeline(output_raw):
     mainloop = GObject.MainLoop()
-    pipeline = build_pipeline()
+    pipeline = build_pipeline(output_raw)
     connect_messages(pipeline.get_bus(), mainloop)
 
     attach_buffer_probe(
         pipeline,
-        file_logger("logs/detections"),
-        file_logger("logs/classifications")
+        file_logger(LOGS_DETECTIONS),
+        file_logger(LOGS_CLASSIFICATIONS)
     )
 
     pipeline.set_state(Gst.State.PLAYING)
@@ -141,6 +146,11 @@ def main():
     finally:
         pipeline.set_state(Gst.State.NULL)
 
+def read_counts():
+    for logfile in (LOGS_DETECTIONS, LOGS_CLASSIFICATIONS):
+        with open(logfile) as log:
+            count = log.read().strip("\n").count("\n")
+        print(f"\n{Path(logfile).stem}: {count}")
 
 if __name__ == "__main__":
     logs = Path("logs")
@@ -148,4 +158,5 @@ if __name__ == "__main__":
     for logfile in logs.iterdir():
         logfile.unlink()
     Gst.init(None)
-    main()
+    run_pipeline(output_raw=False)
+    read_counts()
