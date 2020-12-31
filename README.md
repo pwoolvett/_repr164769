@@ -30,29 +30,34 @@ Reproduce issue/question `164769`, as reported [here](https://forums.developer.n
   $ ffmpeg -version | head -n 1
   ffmpeg version 3.4.8-0ubuntu0.2 Copyright (c) 2000-2020 the FFmpeg developers
   ```
+* GNU make (to ease dev only):
+
+  ```console
+  $ make -v
+  GNU Make 4.1
+  ```
+
+
 
 ### Install
 
-* Install python requirements:
+* Just run `make` in the repo root, which does the following:
+
+  1. Ensure prerequisites are met
+  1. Create python 3.6.9 venv in `.venv.` folder
+  1. Install `requirements.txt`
+  1. Copies models from `/opt` to allow engine creation with normal user perms
+  1. Extracts frames from sample cars video
+  1. Configure `nvinfer` pgie and `sgie` to reproduce issue
+
+## Usage
 
   ```console
-  $ pip install -r requirements.txt 
-  Processing /opt/nvidia/deepstream/deepstream/lib
-  Installing collected packages: pyds
-    Running setup.py install for pyds ... done
-  Successfully installed pyds-1.0.1
+  $ ./demo.py
+  ...
+  detections: 16495
+
+  classifications: 15248
   ```
 
-* Copy models, config, and images
-
-  ```console
-  $ make
-  cp -r /opt/nvidia/deepstream/deepstream/samples/models/Primary_Detector ./data/models
-  cp -r /opt/nvidia/deepstream/deepstream/samples/models/Secondary_CarColor ./data/models
-  cp data/configs/config_infer_primary.txt ./data/models/Primary_Detector
-  cp data/configs/config_infer_secondary_carcolor.txt ./data/models/Secondary_CarColor
-  ffmpeg -i /opt/nvidia/deepstream/deepstream/samples/streams/sample_720p.h264 -start_number 0 -vframes 1088 data/cars/%012d.jpg
-  ...
-  Output #0, image2, to 'data/cars/%012d.jpg':
-  ...
-  ```
+Note: first run takes a while longer as it generates the engine. Subsequent runs should take around 10 [sec] for the demo data.
