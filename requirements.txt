@@ -1,0 +1,2 @@
+/opt/nvidia/deepstream/deepstream/lib/
+PyGObject==3.36.0

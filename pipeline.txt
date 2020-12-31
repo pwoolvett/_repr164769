@@ -1,0 +1,19 @@
+multifilesrc
+  name=src
+  location=cars/%012d.jpg
+  caps="image/jpeg"
+! jpegdec
+  name=decoder
+! nvvideoconvert
+! video/x-raw(memory:NVMM), format=NV12, width=1280, height=720
+! m.sink_0
+  nvstreammux
+  name=m
+  batch-size=1
+  width=1280
+  height=720
+! nvinfer
+  config-file-path=models/Primary_Detector/config_infer_primary.txt
+! nvinfer
+  config-file-path=models/Secondary_CarColor/config_infer_secondary_carcolor.txt
+! fakesink name=monitor
